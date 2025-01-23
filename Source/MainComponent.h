@@ -74,7 +74,7 @@ public:
     
     void initializeOSC();
     
-    bool isDelayActive = true;
+    bool isDelayActive = false;
     bool isReverbActive = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)

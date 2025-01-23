@@ -213,15 +213,15 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
         transportSource.getNextAudioBlock(bufferToFill);
         
         //Apply effect
-        if (transportSource.isPlaying())
+        if (isDelayActive)
         {
-    delayEffect.process(bufferToFill);
-            //reverbEffect.process(*bufferToFill.buffer); // Dereference the buffer pointer
+            delayEffect.process(bufferToFill); // Process through delay
+        }
+        else if (isReverbActive)
+        {
+            reverbEffect.process(*bufferToFill.buffer); // Process through reverb
         }
     }
-    
-
-       
 }
 
 // MIDI input callback -- handlding the knobs, sliders, buttons inputs
@@ -241,66 +241,117 @@ void MainComponent::handleIncomingMidiMessage(juce::MidiInput* source, const juc
                                      + juce::String(controllerValue));
             
             
+            //toggling between audio effects :
             
+            if (controllerNumber == 90) // Button for Delay
+            {
+                isDelayActive = !isDelayActive;
+                isReverbActive = false; // Disable Reverb if Delay is toggled
+                juce::Logger::writeToLog(isDelayActive ? "Delay Effect Enabled" : "Delay Effect Disabled");
+            }
+            else if (controllerNumber == 91) // Button for Reverb
+            {
+                isReverbActive = !isReverbActive;
+                isDelayActive = false; // Disable Delay if Reverb is toggled
+                juce::Logger::writeToLog(isReverbActive ? "Reverb Effect Enabled" : "Reverb Effect Disabled");
+            }
             
-            if (controllerNumber == 18)
+            // Adjust delay parameters only if delay is active
+            if (isDelayActive)
             {
-                // Maps the controller value (0-127) to a range (0.0 to 1.0) for the delay mix parameter
-                float mixValue = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
-                delayEffect.setMix(mixValue); // Updates the mix level of the delay effect
                 
-                // Creates an OSC message to communicate the updated mix value
-                juce::OSCMessage mixValueMessage("/delay/mixValue", mixValue);
-                oscSender.send(mixValueMessage); // Sends OSC message
-            }
-            else if (controllerNumber == 19)
-            {
-                // Maps the controller value (0-127) to a range (0.0 to 0.9) for the delay feedback parameter
-                float feedbackValue = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 0.9f);
-                delayEffect.setFeedback(feedbackValue); // Updates the feedback level of the delay effect
+                if (controllerNumber == 18)
+                {
+                    // Maps the controller value (0-127) to a range (0.0 to 1.0) for the delay mix parameter
+                    float mixValue = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                    delayEffect.setMix(mixValue); // Updates the mix level of the delay effect
+                    
+                    // Creates an OSC message to communicate the updated mix value
+                    juce::OSCMessage mixValueMessage("/delay/mixValue", mixValue);
+                    oscSender.send(mixValueMessage); // Sends OSC message
+                }
+                else if (controllerNumber == 19)
+                {
+                    // Maps the controller value (0-127) to a range (0.0 to 0.9) for the delay feedback parameter
+                    float feedbackValue = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 0.9f);
+                    delayEffect.setFeedback(feedbackValue); // Updates the feedback level of the delay effect
+                    
+                    // Create and send an OSC message for the feedback value
+                    juce::OSCMessage feedbackValueMessage("/delay/feedbackValue", feedbackValue);
+                    oscSender.send(feedbackValueMessage);
+                }
+                else if (controllerNumber == 20)
+                {
+                    // Map the controller value (0-127) to a range (50ms to 2000ms) for the delay time
+                    int delayTime = juce::jmap<int>(controllerValue, 0, 127, 50, 2000);
+                    delayEffect.setDelayTime(delayTime); // Update the delay time of the delay effect
+                    
+                    // Create and send an OSC message for the delay time
+                    juce::OSCMessage delayTimeMessage("/delay/delayTime", delayTime);
+                    oscSender.send(delayTimeMessage);
+                }
                 
-                // Create and send an OSC message for the feedback value
-                juce::OSCMessage feedbackValueMessage("/delay/feedbackValue", feedbackValue);
-                oscSender.send(feedbackValueMessage);
-            }
-            else if (controllerNumber == 20)
-            {
-                // Map the controller value (0-127) to a range (50ms to 2000ms) for the delay time
-                int delayTime = juce::jmap<int>(controllerValue, 0, 127, 50, 2000);
-                delayEffect.setDelayTime(delayTime); // Update the delay time of the delay effect
+                else if (controllerNumber == 21){
+                    // Map the controller value (0-127) to a mix range (0 for dry to 1 for fully wet)
+                    float mix = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                    delayEffect.setMix(mix); // Update the mix parameter of the delay effect
+
+                    // Create and send an OSC message for the delay mix
+                    juce::OSCMessage mixMessage("/delay/mix", mix);
+                    oscSender.send(mixMessage);
+
+                }
                 
-                // Create and send an OSC message for the delay time
-                juce::OSCMessage delayTimeMessage("/delay/delayTime", delayTime);
-                oscSender.send(delayTimeMessage);
+                // effects activation logic
+                if (message.isNoteOn()) {
+                    int midiNote = message.getNoteNumber();
+
+                    if (midiNote == 91) { // Example MIDI note for Reverb
+                        oscSender.send("/effect/reverb/activate", 1);
+                    } else if (midiNote == 90) { // Example MIDI note for Delay
+                        oscSender.send("/effect/delay/activate", 1);
+                    }
+                } else if (message.isNoteOff()) {
+                    int midiNote = message.getNoteNumber();
+
+                    if (midiNote == 91) { // Turn off Reverb
+                        oscSender.send("/effect/reverb/activate", 0);
+                    } else if (midiNote == 90) { // Turn off Delay
+                        oscSender.send("/effect/delay/activate", 0);
+                    }
+                }
+                
+                
             }
-            else if (controllerNumber == 23)
+            
+            // Adjust reverb parameters only if delay is active
+            if (isReverbActive)
             {
-                // Handle volume control separately if controllerNumber is 23
-                handleVolumeControl(controllerValue);
+                
+                // Reverb effect controls
+                if (controllerNumber == 20)
+                {
+                    // Map the controller value (0-127) to a range (0.0 to 1.0) for the reverb room size
+                    float roomSize = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                    reverbEffect.setRoomSize(roomSize); // Update the room size of the reverb effect
+                    
+                    // Create and send an OSC message for the room size parameter
+                    juce::OSCMessage roomSizeMessage("/reverb/roomSize", roomSize);
+                    oscSender.send(roomSizeMessage);
+                }
+                else if (controllerNumber == 21)
+                {
+                    // Map the controller value (0-127) to a range (0.0 to 1.0) for the wet level
+                    float wetLevel = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                    reverbEffect.setWetLevel(wetLevel); // Update the wet level of the reverb effect
+                    
+                    // Create and send an OSC message for the wet level parameter
+                    juce::OSCMessage wetLevelMessage("/reverb/wetLevel", wetLevel);
+                    oscSender.send(wetLevelMessage);
+                }
+                
             }
         }
-//            // Reverb effect controls
-//            if (controllerNumber == 20)
-//            {
-//                // Map the controller value (0-127) to a range (0.0 to 1.0) for the reverb room size
-//                float roomSize = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
-//                reverbEffect.setRoomSize(roomSize); // Update the room size of the reverb effect
-//
-//                // Create and send an OSC message for the room size parameter
-//                juce::OSCMessage roomSizeMessage("/reverb/roomSize", roomSize);
-//                oscSender.send(roomSizeMessage);
-//            }
-//            else if (controllerNumber == 21)
-//            {
-//                // Map the controller value (0-127) to a range (0.0 to 1.0) for the wet level
-//                float wetLevel = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
-//                reverbEffect.setWetLevel(wetLevel); // Update the wet level of the reverb effect
-//
-//                // Create and send an OSC message for the wet level parameter
-//                juce::OSCMessage wetLevelMessage("/reverb/wetLevel", wetLevel);
-//                oscSender.send(wetLevelMessage);
-//            }
-            
         else if (message.isNoteOnOrOff())
         {
             // Log note on/off messages
@@ -317,6 +368,20 @@ void MainComponent::handleIncomingMidiMessage(juce::MidiInput* source, const juc
                 togglePlayPause();
             }
             
+            
+            // Handle effect toggling based on note numbers
+                    if (message.getNoteNumber() == 90 && message.isNoteOn()) // Button for Delay
+                    {
+                        isDelayActive = !isDelayActive;
+                        isReverbActive = false; // Disable Reverb if Delay is toggled
+                        juce::Logger::writeToLog(isDelayActive ? "Delay Effect Enabled" : "Delay Effect Disabled");
+                    }
+                    else if (message.getNoteNumber() == 91 && message.isNoteOn()) // Button for Reverb
+                    {
+                        isReverbActive = !isReverbActive;
+                        isDelayActive = false; // Disable Delay if Reverb is toggled
+                        juce::Logger::writeToLog(isReverbActive ? "Reverb Effect Enabled" : "Reverb Effect Disabled");
+                    }
             
             
         }
