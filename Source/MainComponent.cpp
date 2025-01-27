@@ -177,7 +177,7 @@ void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate
     //reverbEffect.prepare(sampleRate, samplesPerBlockExpected);
     
     // Load an audio file
-    auto file = juce::File("/Users/latifahdickson/Documents/UNI/of_v0.12.0_osx_release/apps/myApps/audio_fx_test/Assets/11_59_The_Ticket.mp3");
+    auto file = juce::File("/Users/latifahdickson/Documents/UNI/of_v0.12.0_osx_release/apps/myApps/audio_fx_test/Assets/Ghetto Heaven (Soul II Soul Remix).mp3");
     auto* reader = formatManager.createReaderFor(file);
 
     if (reader != nullptr)
@@ -382,6 +382,15 @@ void MainComponent::handleIncomingMidiMessage(juce::MidiInput* source, const juc
                         isDelayActive = false; // Disable Delay if Reverb is toggled
                         juce::Logger::writeToLog(isReverbActive ? "Reverb Effect Enabled" : "Reverb Effect Disabled");
                     }
+            
+            // MIDI control for advancing the video
+            else if (message.getNoteNumber() == 64 && message.isNoteOn())
+            {
+                // Send OSC message to advance the video
+                juce::OSCMessage videoAdvanceMessage("/video/advance", 1); // Sending a signal to advance video
+                oscSender.send(videoAdvanceMessage); 
+                juce::Logger::writeToLog("Sending OSC message to advance video");
+            }
             
             
         }
