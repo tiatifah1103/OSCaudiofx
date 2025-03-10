@@ -36,6 +36,7 @@
 		9EDC19BA67E8980DE8DFAC08 /* include_juce_audio_processors_ara.cpp */ = {isa = PBXBuildFile; fileRef = 67D28D6AD00EF8CAFE27A68A; };
 		9F9D98F559F24854D103F20B /* Security.framework */ = {isa = PBXBuildFile; fileRef = EC7CFA9964EE6D03DB5B94E6; };
 		A5716D10F00E01AE07A2EB80 /* AVKit.framework */ = {isa = PBXBuildFile; fileRef = E85415EB66723768C3F27319; };
+		AA983DF676BB91C750196350 /* LowPassFilter.cpp */ = {isa = PBXBuildFile; fileRef = 65EB280F57BCDF0EE928775E; };
 		AB537B5CE59E8F959700F9ED /* include_juce_opengl.mm */ = {isa = PBXBuildFile; fileRef = D41035DE403720FCA6C30494; };
 		BAB4A26FB63088B1BCC71514 /* include_juce_gui_extra.mm */ = {isa = PBXBuildFile; fileRef = D2DC011B0CEA6F84A2FBABCB; };
 		BD864756D6B127446CDF96AA /* include_juce_graphics.mm */ = {isa = PBXBuildFile; fileRef = 3667B74FBB86240B2A1BE2F7; };
@@ -70,6 +71,7 @@
 		3667B74FBB86240B2A1BE2F7 /* include_juce_graphics.mm */ /* include_juce_graphics.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_graphics.mm; path = ../../JuceLibraryCode/include_juce_graphics.mm; sourceTree = SOURCE_ROOT; };
 		368F237D8491E4B4B1C845DD /* juce_gui_extra */ /* juce_gui_extra */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_gui_extra; path = /Users/latifahdickson/Documents/UNI/JUCE/modules/juce_gui_extra; sourceTree = "<absolute>"; };
 		380718BF47BCAB955883CD5B /* include_juce_core.mm */ /* include_juce_core.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_core.mm; path = ../../JuceLibraryCode/include_juce_core.mm; sourceTree = SOURCE_ROOT; };
+		3D7C15E5820BEB3113EFE565 /* LowPassFilter.h */ /* LowPassFilter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = LowPassFilter.h; path = ../../Source/LowPassFilter.h; sourceTree = SOURCE_ROOT; };
 		464752B2C50CD8BDACABD07A /* juce_audio_processors */ /* juce_audio_processors */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_processors; path = /Users/latifahdickson/Documents/UNI/JUCE/modules/juce_audio_processors; sourceTree = "<absolute>"; };
 		48CDF06100BD5DE65273D3EE /* CoreMIDI.framework */ /* CoreMIDI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMIDI.framework; path = System/Library/Frameworks/CoreMIDI.framework; sourceTree = SDKROOT; };
 		4934861BAEA42824776C6B54 /* Accelerate.framework */ /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
@@ -78,6 +80,7 @@
 		522527A49F9EF6B589CA1669 /* juce_data_structures */ /* juce_data_structures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_data_structures; path = /Users/latifahdickson/Documents/UNI/JUCE/modules/juce_data_structures; sourceTree = "<absolute>"; };
 		57DD38129BA734089EF42928 /* MainComponent.h */ /* MainComponent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MainComponent.h; path = ../../Source/MainComponent.h; sourceTree = SOURCE_ROOT; };
 		61428639C2175422A6F71D0B /* include_juce_midi_ci.cpp */ /* include_juce_midi_ci.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_midi_ci.cpp; path = ../../JuceLibraryCode/include_juce_midi_ci.cpp; sourceTree = SOURCE_ROOT; };
+		65EB280F57BCDF0EE928775E /* LowPassFilter.cpp */ /* LowPassFilter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = LowPassFilter.cpp; path = ../../Source/LowPassFilter.cpp; sourceTree = SOURCE_ROOT; };
 		67D28D6AD00EF8CAFE27A68A /* include_juce_audio_processors_ara.cpp */ /* include_juce_audio_processors_ara.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = include_juce_audio_processors_ara.cpp; path = ../../JuceLibraryCode/include_juce_audio_processors_ara.cpp; sourceTree = SOURCE_ROOT; };
 		6CCAF5E91E183B86FCBB600C /* RecentFilesMenuTemplate.nib */ /* RecentFilesMenuTemplate.nib */ = {isa = PBXFileReference; lastKnownFileType = file.nib; name = RecentFilesMenuTemplate.nib; path = RecentFilesMenuTemplate.nib; sourceTree = SOURCE_ROOT; };
 		6D53B8A602EFCCB22D897CED /* juce_audio_utils */ /* juce_audio_utils */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_utils; path = /Users/latifahdickson/Documents/UNI/JUCE/modules/juce_audio_utils; sourceTree = "<absolute>"; };
@@ -240,6 +243,8 @@
 				BB4EB653A1882B6D5FF206D4,
 				27A7B247580B8F4B0CF3CF19,
 				847B8B7453280E6F275DEEAF,
+				3D7C15E5820BEB3113EFE565,
+				65EB280F57BCDF0EE928775E,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -371,6 +376,7 @@
 				5F0C96A316B926B93E41967E,
 				9A8808FD52264C0000FA2008,
 				86957ED4526802EE775F7598,
+				AA983DF676BB91C750196350,
 				80E8C26494BBFDA71AF07048,
 				27005A59CD4C54093DF0E6CB,
 				F650000A433F2CB93FDC40F1,

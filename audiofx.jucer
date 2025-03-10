@@ -13,6 +13,9 @@
             file="Source/MainComponent.cpp"/>
       <FILE id="zsFDkZ" name="DelayEffect.cpp" compile="1" resource="0" file="Source/DelayEffect.cpp"/>
       <FILE id="fNFUm4" name="DelayEffect.h" compile="0" resource="0" file="Source/DelayEffect.h"/>
+      <FILE id="UkFhU7" name="LowPassFilter.h" compile="0" resource="0" file="Source/LowPassFilter.h"/>
+      <FILE id="x0EZMf" name="LowPassFilter.cpp" compile="1" resource="0"
+            file="Source/LowPassFilter.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

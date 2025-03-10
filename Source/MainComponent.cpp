@@ -7,22 +7,24 @@ MainComponent::MainComponent()
 
 {
 
-// Connect the sender to the host (e.g., localhost) and port
-    if (!oscSender.connect("127.0.0.1", 9000))
-        juce::Logger::writeToLog("Failed to connect to OSC receiver!");
-    if (!oscSender.send("/build", juce::String("JUCE Build Complete!")))
-        juce::Logger::writeToLog("Failed to send OSC message!");
+        // Initialise Audio Device Manager
+        deviceManager.initialise(2, 2, nullptr, true);
     
-    setSize(800, 600);
-
-    // Initialize AudioFormatManager
+        // Connect the sender to the host (e.g., localhost) and port
+        if (!oscSender.connect("127.0.0.1", 9000))
+            juce::Logger::writeToLog("Failed to connect to OSC receiver!");
+        if (!oscSender.send("/build", juce::String("JUCE Build Complete!")))
+            juce::Logger::writeToLog("Failed to send OSC message!");
+        
+        setSize(800, 600);
         formatManager.registerBasicFormats();
 
-    // Configures the audio device
-    setAudioChannels(2, 2);
+        // Configures the audio device
+        setAudioChannels(2, 2); // deviceManager should be initialised before
 
-    // Load playlist
-    loadPlaylist();
+        // Load playlist
+        loadPlaylist();
+
 
     // Set up MIDI
     auto midiDevices = juce::MidiInput::getDevices();
@@ -55,6 +57,8 @@ MainComponent::MainComponent()
 //    delayEffect.setFeedback(0.5f);
 //    delayEffect.setMix(0.3f);
 }
+
+
 
 MainComponent::~MainComponent()
 {
@@ -148,6 +152,7 @@ void MainComponent::loadPlaylist()
     
 }
 
+
 void MainComponent::loadAudioFile(const juce::File& file)
 {
     auto* reader = formatManager.createReaderFor(file); // Create the reader for the file
@@ -171,55 +176,167 @@ void MainComponent::loadAudioFile(const juce::File& file)
 
 void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 {
-    transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
-//    audioTransportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
-   delayEffect.prepare(sampleRate, samplesPerBlockExpected);
-    //reverbEffect.prepare(sampleRate, samplesPerBlockExpected);
-    
-    // Load an audio file
-    auto file = juce::File("/Users/latifahdickson/Documents/UNI/of_v0.12.0_osx_release/apps/myApps/audio_fx_test/Assets/Ghetto Heaven (Soul II Soul Remix).mp3");
-    auto* reader = formatManager.createReaderFor(file);
+    // Loads the playlist before attempting to play any track
+    loadPlaylist();
 
-    if (reader != nullptr)
+    // Prepare the transport source and effects
+    transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
+    delayEffect.prepare(sampleRate, samplesPerBlockExpected);
+    lowPassFilter.prepare(sampleRate, samplesPerBlockExpected);
+
+    // Check if any tracks have been loaded from the playlist folder
+    if (!trackFiles.isEmpty())
     {
-        // Attach the file reader to the transport source
-        std::unique_ptr<juce::AudioFormatReaderSource> newSource(new juce::AudioFormatReaderSource(reader, true));
-        transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);
-        readerSource.reset(newSource.release());
+        // Load the first track from the playlist
+        juce::File firstTrack = trackFiles.getFirst();
+        auto* reader = formatManager.createReaderFor(firstTrack);
+        currentTrackIndex = 0; // Start from the first track
+        playNextTrack(); // Start playback automatically
+        
+        if (reader != nullptr)
+        {
+            std::unique_ptr<juce::AudioFormatReaderSource> newSource(
+                new juce::AudioFormatReaderSource(reader, true)
+            );
+            transportSource.setSource(newSource.get(), 0, nullptr, reader->sampleRate);
+            readerSource.reset(newSource.release());
+
+            juce::Logger::writeToLog("Loaded track: " + firstTrack.getFullPathName());
+            transportSource.start(); // Start playback
+        }
+        else
+        {
+            juce::Logger::writeToLog("Error: Could not load audio file: " + firstTrack.getFullPathName());
+        }
+    }
+    else
+    {
+        juce::Logger::writeToLog("No tracks found in the playlist folder.");
+    }
+
+    // Log and set the desired audio output devices
+    auto& audioDevices = deviceManager.getAvailableDeviceTypes();
+    juce::StringArray deviceNames;
+    
+    // Loop through available device types and their names
+    for (auto* deviceType : audioDevices)
+    {
+        juce::StringArray names = deviceType->getDeviceNames();
+        deviceNames.addArray(names);
     }
     
-    
+    juce::Logger::writeToLog("Available Audio Devices:");
+    for (const auto& deviceName : deviceNames)
+    {
+        juce::Logger::writeToLog(deviceName);
+
+    //check for specific audio device
+        if (deviceName.containsIgnoreCase("KM_B2 AUX"))
+        {
+            juce::AudioDeviceManager::AudioDeviceSetup setup;
+            deviceManager.getAudioDeviceSetup(setup);
+
+            setup.outputDeviceName = deviceName;
+            setup.sampleRate = sampleRate;
+            setup.bufferSize = samplesPerBlockExpected;
+
+            juce::String result = deviceManager.setAudioDeviceSetup(setup, true);
+            if (result.isEmpty())
+            {
+                juce::Logger::writeToLog("Successfully set output device to: " + deviceName);
+            }
+            else
+            {
+                juce::Logger::writeToLog("Failed to set audio device setup: " + result);
+            }
+        }
+
+        // Check for specific audio device
+        if (deviceName.containsIgnoreCase("External Headphones"))
+        {
+            juce::AudioDeviceManager::AudioDeviceSetup setup;
+            deviceManager.getAudioDeviceSetup(setup);
+
+            setup.outputDeviceName = deviceName;
+            setup.sampleRate = sampleRate;
+            setup.bufferSize = samplesPerBlockExpected;
+
+            juce::String result = deviceManager.setAudioDeviceSetup(setup, true);
+            if (result.isEmpty())
+            {
+                juce::Logger::writeToLog("Successfully set output device to: " + deviceName);
+            }
+            else
+            {
+                juce::Logger::writeToLog("Failed to set audio device setup: " + result);
+            }
+        }
+    }
 }
 
-void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 
+
+
+void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    // Process the audio through the transport source first
-    //    audioTransportSource.getNextAudioBlock(bufferToFill);
-    
-    // fill the buffer with some audio
-    bufferToFill.clearActiveBufferRegion(); // clear any previously active buffer data
-    
-    audioSource.getNextAudioBlock(bufferToFill);  // Use audioSource to fill the buffer
+    bufferToFill.clearActiveBufferRegion();
+
+    if (transportSource.isPlaying())
     {
-        // Clear buffer if transport source is not playing
-        if (!transportSource.isPlaying())
-        {
-            bufferToFill.clearActiveBufferRegion();
-            return;
-        }
-        
-        // audio data from the transport source
         transportSource.getNextAudioBlock(bufferToFill);
-        
-        //Apply effect
+
+        // Checks if playback has finished
+        if (transportSource.getCurrentPosition() >= transportSource.getLengthInSeconds())
+        {
+            playNextTrack();
+        }
+
+        // Get the current audio device
+        auto* currentDevice = deviceManager.getCurrentAudioDevice();
+        if (currentDevice == nullptr)
+            return;
+
+        // Duplicate buffer for separate processing
+        // Create a separate copy of the audio buffer to apply different effects
+        // to the external speakers while keeping the original buffer for headphones.
+        juce::AudioBuffer<float> speakerBuffer(*bufferToFill.buffer);
+
+        // Check if the audio device is headphones or speakers
+        if (currentDevice->getName().containsIgnoreCase("External Headphones"))
+        {
+            for (int channel = 0; channel < speakerBuffer.getNumChannels(); ++channel)
+            {
+                speakerBuffer.applyGain(channel, bufferToFill.startSample, bufferToFill.numSamples, volumeLevel);
+            }
+            bufferToFill.buffer->copyFrom(0, bufferToFill.startSample, speakerBuffer, 0, bufferToFill.startSample, bufferToFill.numSamples);
+            if (speakerBuffer.getNumChannels() > 1)
+                bufferToFill.buffer->copyFrom(1, bufferToFill.startSample, speakerBuffer, 1, bufferToFill.startSample, bufferToFill.numSamples);
+        }
+        else if (currentDevice->getName().containsIgnoreCase("KM_B2 AUX"))
+        {
+            // Apply the low-pass filter to the external speaker output
+            lowPassFilter.process(speakerBuffer);
+
+            //Volume control to the speaker buffer as well:
+            for (int channel = 0; channel < speakerBuffer.getNumChannels(); ++channel)
+            {
+                speakerBuffer.applyGain(channel, bufferToFill.startSample, bufferToFill.numSamples, volumeLevel);
+            }
+
+            // Copies the processed speaker buffer back into the original buffer to output to the speakers
+            bufferToFill.buffer->copyFrom(0, bufferToFill.startSample, speakerBuffer, 0, bufferToFill.startSample, bufferToFill.numSamples);
+            if (speakerBuffer.getNumChannels() > 1)
+                bufferToFill.buffer->copyFrom(1, bufferToFill.startSample, speakerBuffer, 1, bufferToFill.startSample, bufferToFill.numSamples);
+        }
+
+        // Apply effects (delay or reverb) to both outputs
         if (isDelayActive)
         {
-            delayEffect.process(bufferToFill); // Process through delay
+            delayEffect.process(bufferToFill);
         }
         else if (isReverbActive)
         {
-            reverbEffect.process(*bufferToFill.buffer); // Process through reverb
+            reverbEffect.process(*bufferToFill.buffer);
         }
     }
 }
@@ -240,6 +357,11 @@ void MainComponent::handleIncomingMidiMessage(juce::MidiInput* source, const juc
                                      + ", Value = "
                                      + juce::String(controllerValue));
             
+            if (controllerNumber == 9) //volume control for speaker
+            {
+                volumeLevel = juce::jmap(static_cast<float>(controllerValue), 0.0f, 127.0f, 0.0f, 1.0f);
+                juce::Logger::writeToLog("Volume set to: " + juce::String(volumeLevel));
+            }
             
             //toggling between audio effects :
             
@@ -368,6 +490,11 @@ void MainComponent::handleIncomingMidiMessage(juce::MidiInput* source, const juc
                 togglePlayPause();
             }
             
+            if (message.getNoteNumber() == 66 && message.isNoteOn()) //for testing, advances to next track in the playlist
+                    {
+                        nextTrack();
+                    }
+            
             
             // Handle effect toggling based on note numbers
                     if (message.getNoteNumber() == 90 && message.isNoteOn()) // Button for Delay
@@ -423,14 +550,23 @@ void MainComponent::handleVolumeControl(int controllerValue)
 // Start next track
 void MainComponent::nextTrack()
 {
-    currentTrackIndex = (currentTrackIndex + 1) % playlistFiles.size();
+    if (!trackFiles.isEmpty())
+    {
+        currentTrackIndex = (currentTrackIndex + 1) % trackFiles.size(); // Loop back to the first track if at the end
+        loadAudioFile(trackFiles[currentTrackIndex]);
+        transportSource.start(); // Start playback
+        juce::Logger::writeToLog("Playing next track: " + trackFiles[currentTrackIndex].getFullPathName());
+    }
+}
 
-    audioTransportSource.setSource(nullptr); // Clears current source
+void MainComponent::playNextTrack()
+{
+    if (trackFiles.isEmpty()) return;
 
-    audioTransportSource.setSource(new juce::AudioFormatReaderSource(
-      formatManager.createReaderFor(juce::File(playlistFiles[currentTrackIndex])),
-       true));
-    audioTransportSource.start();
+    currentTrackIndex = (currentTrackIndex + 1) % trackFiles.size(); // Loop playlist
+
+    loadAudioFile(trackFiles[currentTrackIndex]); // Load new track
+    transportSource.start(); // Start playback
 }
 
 // Shutdown
@@ -458,4 +594,18 @@ void MainComponent::resized()
 {
 
 }
+
+//void MainComponent::listAudioDevices()
+//{
+//    auto& deviceTypes = deviceManager.getAvailableDeviceTypes();
+//
+//    for (auto* deviceType : deviceTypes)
+//    {
+//        juce::StringArray deviceNames = deviceType->getDeviceNames();
+//        for (const auto& name : deviceNames)
+//        {
+//            juce::Logger::writeToLog("Available Audio Device: " + name);
+//        }
+//    }
+//}
 

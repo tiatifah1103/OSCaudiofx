@@ -5,6 +5,7 @@
 #include "DelayEffect.h"
 #include "ReverbEffect.h"
 #include <juce_osc/juce_osc.h>
+#include "LowPassFilter.h"
 
 class MainComponent  : public juce::AudioAppComponent, public juce::MidiInputCallback
 
@@ -27,6 +28,8 @@ public:
         void nextTrack();
     void handleVolumeControl(int controllerValue);
     void loadAudioFile(const juce::File& file);
+    void listAudioDevices();
+    void playNextTrack();
 
 
     private:
@@ -60,7 +63,7 @@ public:
     juce::OSCSender oscSender; 
    // juce::OSCMessage oscMessage;
 
-
+LowPassFilter lowPassFilter;
     
     
     // Reverb parameters to send via OSC
@@ -76,6 +79,7 @@ public:
     
     bool isDelayActive = false;
     bool isReverbActive = false;
+    float volumeLevel = 0.5f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
