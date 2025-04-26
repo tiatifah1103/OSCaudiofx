@@ -1,23 +1,27 @@
-#pragma once
+#ifndef LowPassFilter_H
+#define LowPassFilter_H
 
+#include <vector>
 #include <JuceHeader.h>
 
-class LowPassFilter
-{
+class LowPassFilter {
 public:
+    // Constructor
     LowPassFilter();
 
-    void prepare(double sampleRate, int samplesPerBlock);
-    void process(juce::AudioBuffer<float>& buffer);
-    void setCutoffFrequency(float newCutoff);
+
+    void setHighpass(bool highpass);
+    void setCutoffFrequency(float cutoffFrequency);
+    void setSamplingRate(float samplingRate);
+    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&);
 
 private:
-    float cutoffFrequency;
-    double sampleRate; // Stores sample rate for coefficient calculations
+    bool highpass;
+    float cutoffFrequency; // Cutoff frequency in Hz
+    float samplingRate; // Sampling rate in Hz
 
-    //ProcessorDuplicator to apply the filter to both channels
-    using Filter = juce::dsp::IIR::Filter<float>;
-    using DuplicatedFilter = juce::dsp::ProcessorDuplicator<Filter, juce::dsp::IIR::Coefficients<float>>;
-
-    DuplicatedFilter filter;
+    std::vector<float> dnBuffer; // Buffers for processing per channel
+    std::vector<float> dnBuffer2;
 };
+
+#endif // LowPassFilter_H

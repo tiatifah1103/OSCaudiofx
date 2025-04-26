@@ -16,6 +16,10 @@
       <FILE id="UkFhU7" name="LowPassFilter.h" compile="0" resource="0" file="Source/LowPassFilter.h"/>
       <FILE id="x0EZMf" name="LowPassFilter.cpp" compile="1" resource="0"
             file="Source/LowPassFilter.cpp"/>
+      <FILE id="jaxAW2" name="FrequencyBands.h" compile="0" resource="0"
+            file="Source/FrequencyBands.h"/>
+      <FILE id="zlWJjX" name="FrequencyBands.cpp" compile="1" resource="0"
+            file="Source/FrequencyBands.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

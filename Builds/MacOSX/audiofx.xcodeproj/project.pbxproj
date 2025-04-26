@@ -29,6 +29,7 @@
 		6ADCCFA6E1B493035572BDE1 /* Foundation.framework */ = {isa = PBXBuildFile; fileRef = D27B5DEF6999EFA6F95E4567; };
 		77C9A77DD613BF8E76ADABD8 /* include_juce_graphics_Harfbuzz.cpp */ = {isa = PBXBuildFile; fileRef = 4B6D9A87B1C7C7583652224D; };
 		7A28BC8CE0907F8A6640098A /* include_juce_core.mm */ = {isa = PBXBuildFile; fileRef = 380718BF47BCAB955883CD5B; };
+		7DA8AE4C9857E1BF5167F28B /* FrequencyBands.cpp */ = {isa = PBXBuildFile; fileRef = B341FCAAE9FF07FDA2D01BD3; };
 		7E6C21E266395C387A90C829 /* WebKit.framework */ = {isa = PBXBuildFile; fileRef = E6BF1FE86481E4D997357941; };
 		80E8C26494BBFDA71AF07048 /* include_juce_audio_basics.mm */ = {isa = PBXBuildFile; fileRef = 92D3379EFD5066507E41BD12; };
 		86957ED4526802EE775F7598 /* DelayEffect.cpp */ = {isa = PBXBuildFile; fileRef = 27A7B247580B8F4B0CF3CF19; };
@@ -58,6 +59,7 @@
 /* Begin PBXFileReference section */
 		00F65E12AC880A5D50907189 /* App */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = audiofx.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		01762EEFDD0E3027163FC3D8 /* ReverbEffect.cpp */ /* ReverbEffect.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ReverbEffect.cpp; path = ../../Source/ReverbEffect.cpp; sourceTree = SOURCE_ROOT; };
+		0226926202E3E380161465B7 /* FrequencyBands.h */ /* FrequencyBands.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = FrequencyBands.h; path = ../../Source/FrequencyBands.h; sourceTree = SOURCE_ROOT; };
 		04D42C2D429D1E96D08C55B1 /* Info-App.plist */ /* Info-App.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Info-App.plist"; path = "Info-App.plist"; sourceTree = SOURCE_ROOT; };
 		052A15AEE691938018CCDD69 /* juce_audio_devices */ /* juce_audio_devices */ = {isa = PBXFileReference; lastKnownFileType = folder; name = juce_audio_devices; path = /Users/latifahdickson/Documents/UNI/JUCE/modules/juce_audio_devices; sourceTree = "<absolute>"; };
 		093DE22E8671893E5B29432C /* include_juce_dsp.mm */ /* include_juce_dsp.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_dsp.mm; path = ../../JuceLibraryCode/include_juce_dsp.mm; sourceTree = SOURCE_ROOT; };
@@ -98,6 +100,7 @@
 		AD89F123EC44C66B8CA0F971 /* include_juce_data_structures.mm */ /* include_juce_data_structures.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_data_structures.mm; path = ../../JuceLibraryCode/include_juce_data_structures.mm; sourceTree = SOURCE_ROOT; };
 		B0019F6E7F0B657F1F133F45 /* IOKit.framework */ /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		B29435B8A41DDAE8DEC4A9BC /* include_juce_audio_processors.mm */ /* include_juce_audio_processors.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_audio_processors.mm; path = ../../JuceLibraryCode/include_juce_audio_processors.mm; sourceTree = SOURCE_ROOT; };
+		B341FCAAE9FF07FDA2D01BD3 /* FrequencyBands.cpp */ /* FrequencyBands.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = FrequencyBands.cpp; path = ../../Source/FrequencyBands.cpp; sourceTree = SOURCE_ROOT; };
 		B76B706620D9526FB23E6A6A /* CoreMedia.framework */ /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		BB4EB653A1882B6D5FF206D4 /* MainComponent.cpp */ /* MainComponent.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = MainComponent.cpp; path = ../../Source/MainComponent.cpp; sourceTree = SOURCE_ROOT; };
 		C28099F443E47A4BA15E8AA5 /* include_juce_video.mm */ /* include_juce_video.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = include_juce_video.mm; path = ../../JuceLibraryCode/include_juce_video.mm; sourceTree = SOURCE_ROOT; };
@@ -245,6 +248,8 @@
 				847B8B7453280E6F275DEEAF,
 				3D7C15E5820BEB3113EFE565,
 				65EB280F57BCDF0EE928775E,
+				0226926202E3E380161465B7,
+				B341FCAAE9FF07FDA2D01BD3,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -377,6 +382,7 @@
 				9A8808FD52264C0000FA2008,
 				86957ED4526802EE775F7598,
 				AA983DF676BB91C750196350,
+				7DA8AE4C9857E1BF5167F28B,
 				80E8C26494BBFDA71AF07048,
 				27005A59CD4C54093DF0E6CB,
 				F650000A433F2CB93FDC40F1,

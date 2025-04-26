@@ -6,6 +6,7 @@
 #include "ReverbEffect.h"
 #include <juce_osc/juce_osc.h>
 #include "LowPassFilter.h"
+#include "FrequencyBands.h"
 
 class MainComponent  : public juce::AudioAppComponent, public juce::MidiInputCallback
 
@@ -31,6 +32,7 @@ public:
     void listAudioDevices();
     void playNextTrack();
 
+    
 
     private:
         //==============================================================================
@@ -46,6 +48,12 @@ public:
 
         DelayEffect delayEffect;
         ReverbEffect reverbEffect;
+    FrequencyBands frequencyBands;
+    
+// float values to store the knob values
+    float bassCutoff = 200.0f;
+    float midsCutoff = 1000.0f;
+    float topsCutoff = 5000.0f;
 
         void loadPlaylist();
         void shutdownAudio();
@@ -58,13 +66,31 @@ public:
     // Reader source to hold the audio data
         std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
     
+    juce::AudioDeviceManager speakerDeviceManager;
+    juce::AudioDeviceManager headphoneDeviceManager;
+
+    juce::AudioSourcePlayer speakerSourcePlayer;
+    juce::AudioSourcePlayer headphoneSourcePlayer;
+    
+    std::unique_ptr<juce::AudioProcessor> speakerProcessor;
+        std::unique_ptr<juce::AudioProcessor> headphoneProcessor;
+    
+  //  juce::IIRFilterAudioSource lowPassFilter { &transportSource, false }; // Filter for speakers
+    
     
    // juce::OSCReceiver oscReceiver;  // Receiver for OSC messages
-    juce::OSCSender oscSender; 
+    juce::OSCSender oscSender;
    // juce::OSCMessage oscMessage;
 
-LowPassFilter lowPassFilter;
+    LowPassFilter lowPassFilter;
     
+    LowPassFilter topsFilter;  // Will be used for high-pass (treble)
+    juce::SmoothedValue<float> smoothedTopsCutoff;
+    bool topsFilterNeedsReset = false;
+    
+    // For bypass smoothing
+    juce::LinearSmoothedValue<float> topsFilterMix;
+    juce::AudioBuffer<float> topsFilterBuffer; // Temporary buffer for processing
     
     // Reverb parameters to send via OSC
     struct ReverbParams
@@ -75,11 +101,13 @@ LowPassFilter lowPassFilter;
     
     ReverbParams reverbParams;  // Instance of the reverb parameters struct
     
+    
     void initializeOSC();
     
     bool isDelayActive = false;
     bool isReverbActive = false;
-    float volumeLevel = 0.5f;
+    float volumeLevel = 1.0f;
+    double currentSampleRate = 44100.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
