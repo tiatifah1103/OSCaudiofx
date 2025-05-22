@@ -48,7 +48,7 @@ public:
 
         DelayEffect delayEffect;
         ReverbEffect reverbEffect;
-    FrequencyBands frequencyBands;
+        FrequencyBands frequencyBands;
     
 // float values to store the knob values
     float bassCutoff = 200.0f;
@@ -100,7 +100,7 @@ public:
     };
     
     ReverbParams reverbParams;  // Instance of the reverb parameters struct
-    
+    FrequencyBands eq;
     
     void initializeOSC();
     
@@ -108,6 +108,7 @@ public:
     bool isReverbActive = false;
     float volumeLevel = 1.0f;
     double currentSampleRate = 44100.0;
+    int currentBlockSize = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

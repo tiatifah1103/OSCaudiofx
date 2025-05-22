@@ -32,13 +32,16 @@ public:
     void setMix(float newMix);
     
     void resized();
+    bool isActive() const {
+        return (mix > 0.001f) || (feedback > 0.001f) || (delayTimeSamples > 44);
+    }
 
 private:
     juce::AudioBuffer<float> delayBuffer;
     int writePosition = 0;
     int delayTimeSamples = 0;
-    float feedback = 0.5f;
-    float mix = 0.5f;
+    float feedback = 0.0f;
+    float mix = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayEffect)
 };

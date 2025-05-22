@@ -23,6 +23,7 @@ DelayEffect::~DelayEffect()
 {
 }
 
+// Main audio processing function
 void DelayEffect::process(const juce::AudioSourceChannelInfo& bufferToFill)
 {
     auto numSamples = bufferToFill.numSamples;
@@ -34,33 +35,47 @@ void DelayEffect::process(const juce::AudioSourceChannelInfo& bufferToFill)
 
         for (int sample = 0; sample < numSamples; ++sample)
         {
+            // Reads input sample from audio stream
             auto inSample = channelData[sample];
+
+            // Reads delayed sample from delay buffer
             auto delayedSample = delayBuffer.getSample(channel, (writePosition + sample) % delayBuffer.getNumSamples());
 
+            // Mixes original signal and delayed signal
             auto outSample = inSample + delayedSample * mix;
+
+            // Outputs mixed sample
             channelData[sample] = outSample;
 
+            // Writes to delay buffer with feedback
             delayBuffer.setSample(channel, (writePosition + sample) % delayBuffer.getNumSamples(), inSample + delayedSample * feedback);
         }
     }
 
+    // Moves the write position forward, wrapping around the buffer length
     writePosition = (writePosition + numSamples) % delayBuffer.getNumSamples();
 }
 
+// Sets delay time in milliseconds
 void DelayEffect::setDelayTime(int newDelayTimeMs)
 {
-    delayTimeSamples = newDelayTimeMs * 44.1; // Convert ms to samples
+    // Converts delay time from milliseconds to samples at 44.1kHz
+    delayTimeSamples = newDelayTimeMs * 44.1;
 }
 
+// Sets feedback amount
 void DelayEffect::setFeedback(float newFeedback)
 {
     feedback = newFeedback;
 }
 
+// Sets mix amount between dry and delayed signal
 void DelayEffect::setMix(float newMix)
 {
     mix = newMix;
 }
+
+// Prepares the delay buffer before playback
 
 void DelayEffect::prepare(double sampleRate, int samplesPerBlock)
 {

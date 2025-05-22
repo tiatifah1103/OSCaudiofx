@@ -6,6 +6,7 @@
 MainComponent::MainComponent()
 
 {
+
         // Initialise Audio Device Manager
      //   deviceManager.initialise(2, 2, nullptr, true);
     
@@ -19,7 +20,7 @@ MainComponent::MainComponent()
         formatManager.registerBasicFormats();
 
         // Configures the audio device
-        setAudioChannels(2, 2); // deviceManager should be initialised before
+        setAudioChannels(1, 1); // deviceManager should be initialised before
 
         // Load playlist
         loadPlaylist();
@@ -53,31 +54,28 @@ MainComponent::MainComponent()
 //        audioTransportSource.start();
     }
 
-//    // initial effect parameters
-//    delayEffect.setDelayTime(500);
-//    delayEffect.setFeedback(0.5f);
-//    delayEffect.setMix(0.3f);
 }
-
-
 
 MainComponent::~MainComponent()
 {
+    // Stops MIDI input if it was started
     if (midiInput)
         midiInput->stop();
 
+    // Shuts down the audio system to free audio resources
     shutdownAudio();
 }
 
 // Assets folder path
 juce::File MainComponent::getAssetsFolder()
 {
+    // Gets the working directory of the application
     auto currentWorkingDir = juce::File::getCurrentWorkingDirectory();
 
- 
+    // Defines the path to the Assets folder manually
     auto assetsFolder = currentWorkingDir.getChildFile("/Users/latifahdickson/Documents/UNI/of_v0.12.0_osx_release/apps/myApps/audio_fx_test/Assets");
-//    assetsFolder = currentWorkingDir.getChildFile("/Users/latifahdickson/Documents/UNI/of_v0.12.0_osx_release/apps/myApps/audio_fx_test/Assets");
 
+    // Checks if it exists and is a directory
     if (!assetsFolder.exists() || !assetsFolder.isDirectory())
     {
         juce::Logger::writeToLog("Assets folder not found!");
@@ -90,8 +88,11 @@ juce::File MainComponent::getAssetsFolder()
     return assetsFolder;
 }
 
+
 void MainComponent::loadPlaylist()
 {
+    
+    // Get path to Assets folder and find the playlist JSON file
         auto assetsFolder = getAssetsFolder();
         auto jsonFile = assetsFolder.getChildFile("playlist.json");
 
@@ -112,6 +113,7 @@ void MainComponent::loadPlaylist()
             auto jsonContent = fileStream.readEntireStreamAsString();
             jsonData = juce::JSON::parse(jsonContent);
 
+            // Expect the top-level structure to be an array
             if (jsonData.isArray())
             {
                 for (auto& track : *jsonData.getArray())
@@ -120,12 +122,12 @@ void MainComponent::loadPlaylist()
                     {
                         auto* trackObj = track.getDynamicObject();
 
-                        //extract fields
+                        //extract info from .json
                         auto trackPath = assetsFolder.getChildFile(trackObj->getProperty("file").toString());
                         auto trackTitle = trackObj->getProperty("title").toString();
                         auto trackArtist = trackObj->getProperty("artist").toString();
 
-                        //verify file exists
+                        // if  file exists, add it to the internal playlist
                         if (trackPath.existsAsFile())
                         {
                             trackNames.add(trackTitle + " by " + trackArtist);
@@ -178,12 +180,15 @@ void MainComponent::loadAudioFile(const juce::File& file)
 void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 {
     
+    currentBlockSize = samplesPerBlockExpected;  // Store the block size
+       currentSampleRate = sampleRate;
+    
     // Set up the Multi-Output Device
         auto* deviceType = deviceManager.getCurrentDeviceTypeObject();
         juce::StringArray allDevices = deviceType->getDeviceNames();
 
         // Find Multi-Output Device by name
-        juce::String multiOutputDeviceName = "External Headphones";
+        juce::String multiOutputDeviceName = "GIGAPORT eX";
         if (allDevices.contains(multiOutputDeviceName)) {
             juce::AudioDeviceManager::AudioDeviceSetup setup;
             deviceManager.getAudioDeviceSetup(setup);
@@ -210,8 +215,8 @@ void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate
     // Prepare the transport source and effects
     transportSource.prepareToPlay(samplesPerBlockExpected, sampleRate);
     delayEffect.prepare(sampleRate, samplesPerBlockExpected);
-
-    
+    reverbEffect.prepare(sampleRate, samplesPerBlockExpected);
+    eq.prepare(sampleRate, samplesPerBlockExpected);
     
 
     // Check if any tracks have been loaded from the playlist folder
@@ -254,63 +259,45 @@ void MainComponent::prepareToPlay(int samplesPerBlockExpected, double sampleRate
 
 void MainComponent::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    // Clear buffer once at start
-    bufferToFill.clearActiveBufferRegion();
+    
+    // Clears the active region of the buffer to avoid leftover audio data from previous processing
+   
+        bufferToFill.clearActiveBufferRegion();
 
-    if (transportSource.isPlaying())
-    {
-        // 1. Get audio directly into final buffer
-        transportSource.getNextAudioBlock(bufferToFill);
-        
-        // Check playback completion
-        if (transportSource.getCurrentPosition() >= transportSource.getLengthInSeconds())
+    // Checks if the audio transport source is currently playing
+        if (transportSource.isPlaying())
         {
-            playNextTrack();
-        }
+            // Fills the buffer with the next block of audio from the transport source
+            transportSource.getNextAudioBlock(bufferToFill);
+            
+            // If playback has reached the end of the track, advances
+            if (transportSource.getCurrentPosition() >= transportSource.getLengthInSeconds())
+            {
+                playNextTrack();
+            }
 
-        // 2. Create a processing buffer that references the original data (no copy)
-        juce::AudioBuffer<float> processingBuffer(
-            bufferToFill.buffer->getArrayOfWritePointers(),
-            bufferToFill.buffer->getNumChannels(),
-            bufferToFill.startSample,
-            bufferToFill.numSamples
-        );
-//
-//        // 3. Apply filters if needed
-//        juce::MidiBuffer dummyMidi;
-//        if (!lowPassFilter.isBypassed()) {
-//            lowPassFilter.processBlock(processingBuffer, dummyMidi);
-//        }
-//        if (!topsFilter.isBypassed()) {
-//            // Apply smoothed cutoff
-//            topsFilter.setCutoffFrequency(smoothedTopsCutoff.getNextValue());
-//
-//            if (topsFilterNeedsReset) {
-//                topsFilter.reset();
-//                topsFilterNeedsReset = false;
-//            }
-//
-//            topsFilter.processBlock(processingBuffer, dummyMidi);
-//        }
+            //Temp buffer to apply additional audio processing
+            juce::AudioBuffer<float> processingBuffer(
+                bufferToFill.buffer->getArrayOfWritePointers(),
+                bufferToFill.buffer->getNumChannels(),
+                bufferToFill.startSample,
+                bufferToFill.numSamples
+            );
 
-        // 4. Apply volume only once (after all processing)
-        processingBuffer.applyGain(volumeLevel * 2.5);
+            processingBuffer.applyGain(volumeLevel * 2.5);
 
-//        // 5. Handle device-specific processing if needed
-//        auto* currentDevice = deviceManager.getCurrentAudioDevice();
-//        if (currentDevice && currentDevice->getName().containsIgnoreCase(" ")) {
-//            // Optional: Add speaker-specific EQ or processing here
-//        }
 
-        // 6. Apply effects (delay/reverb)
-        if (isDelayActive) {
-            delayEffect.process(bufferToFill); // Delay needs original buffer structure
-        }
-        else if (isReverbActive) {
-            reverbEffect.process(processingBuffer); // Reverb can use processing buffer
-        }
+            if (delayEffect.isActive())
+                delayEffect.process(bufferToFill);
+                
+            if (reverbEffect.isActive())
+                reverbEffect.process(processingBuffer);
+                
+            // Applies EQ filter to the buffer
+            eq.process(*bufferToFill.buffer, {});
 
-        // 7. Final safety limiting
+            //Safety checks to prevent audio clipping:
+                    //  amplitude limited to between -0.95 and 0.95 on all channels
         for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch) {
             juce::FloatVectorOperations::clip(
                 bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample),
@@ -344,109 +331,71 @@ void MainComponent::handleIncomingMidiMessage(juce::MidiInput* source, const juc
                 juce::Logger::writeToLog("Volume set to: " + juce::String(volumeLevel));
             }
             
-            //toggling between audio effects :
             
-            if (controllerNumber == 90) // Button for Delay
-            {
-                isDelayActive = !isDelayActive;
-                isReverbActive = false; // Disable Reverb if Delay is toggled
-                juce::Logger::writeToLog(isDelayActive ? "Delay Effect Enabled" : "Delay Effect Disabled");
+            if (controllerNumber == 20) { // Room Size
+                float roomSize = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                reverbEffect.setRoomSize(roomSize);
+                oscSender.send("/reverb/roomSize", roomSize);
             }
-            else if (controllerNumber == 91) // Button for Reverb
-            {
-                isReverbActive = !isReverbActive;
-                isDelayActive = false; // Disable Delay if Reverb is toggled
-                juce::Logger::writeToLog(isReverbActive ? "Reverb Effect Enabled" : "Reverb Effect Disabled");
+            else if (controllerNumber == 18) { // Wet Level
+                float wetLevel = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                reverbEffect.setWetLevel(wetLevel);
+                oscSender.send("/reverb/wetLevel", wetLevel);
             }
-            
-            // Adjust delay parameters only if delay is active
-            if (isDelayActive)
-            {
-                
-                if (controllerNumber == 8)
-                {
-                    // Maps the controller value (0-127) to a range (0.0 to 1.0) for the delay mix parameter
-                    float mixValue = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
-                    delayEffect.setMix(mixValue); // Updates the mix level of the delay effect
-                    
-                    // Creates an OSC message to communicate the updated mix value
-                    juce::OSCMessage mixValueMessage("/delay/mixValue", mixValue);
-                    oscSender.send(mixValueMessage); // Sends OSC message
-                }
-                else if (controllerNumber == 23)
-                {
-                    // Maps the controller value (0-127) to a range (0.0 to 0.9) for the delay feedback parameter
-                    float feedbackValue = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 0.9f);
-                    delayEffect.setFeedback(feedbackValue); // Updates the feedback level of the delay effect
-                    
-                    // Create and send an OSC message for the feedback value
-                    juce::OSCMessage feedbackValueMessage("/delay/feedbackValue", feedbackValue);
-                    oscSender.send(feedbackValueMessage);
-                }
-                else if (controllerNumber == 9)
-                {
-                    // Map the controller value (0-127) to a range (50ms to 2000ms) for the delay time
-                    int delayTime = juce::jmap<int>(controllerValue, 0, 127, 50, 2000);
-                    delayEffect.setDelayTime(delayTime); // Update the delay time of the delay effect
-                    
-                    // Create and send an OSC message for the delay time
-                    juce::OSCMessage delayTimeMessage("/delay/delayTime", delayTime);
-                    oscSender.send(delayTimeMessage);
-                }
-                
-                
-                // effects activation logic
-                if (message.isNoteOn()) {
-                    int midiNote = message.getNoteNumber();
-                    
-                    if (midiNote == 91) { //  MIDI note for Reverb
-                        oscSender.send("/effect/reverb/activate", 1);
-                    } else if (midiNote == 90) { // MIDI note for Delay
-                        oscSender.send("/effect/delay/activate", 1);
-                    }
-                } else if (message.isNoteOff()) {
-                    int midiNote = message.getNoteNumber();
-                    
-                    if (midiNote == 91) { // Turn off Reverb
-                        oscSender.send("/effect/reverb/activate", 0);
-                    } else if (midiNote == 90) { // Turn off Delay
-                        oscSender.send("/effect/delay/activate", 0);
-                    }
-                }
-                
-                
+            else if (controllerNumber == 12) { // Damping
+                float damping = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                reverbEffect.setDamping(damping);
+                oscSender.send("/reverb/damping", damping);
+            }
+            else if (controllerNumber == 11) { // Width
+                float width = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                reverbEffect.setWidth(width);
+                oscSender.send("/reverb/width", width);
             }
             
-            // Adjust reverb parameters only if delay is active
-            if (isReverbActive)
+            if (controllerNumber == 21) { // Bass
+                float bassGain = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                eq.setBassGain(bassGain);
+                oscSender.send("/eq/bass", bassGain);
+            }
+            else if (controllerNumber == 19) { // Mids
+                float midsGain = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                eq.setMidsGain(midsGain);
+                oscSender.send("/eq/mids", midsGain);
+            }
+            else if (controllerNumber == 17) { // Tops
+                float topsGain = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                eq.setTopsGain(topsGain);
+                oscSender.send("/eq/tops", topsGain);
+            }
+            
+            if (controllerNumber == 8)
             {
                 
-                if (isReverbActive) {
-                    if (controllerNumber == 20) { // Room Size
-                        float roomSize = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
-                        reverbEffect.setRoomSize(roomSize);
-                        oscSender.send("/reverb/roomSize", roomSize);
-                    }
-                    else if (controllerNumber == 21) { // Wet Level
-                        float wetLevel = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
-                        reverbEffect.setWetLevel(wetLevel);
-                        oscSender.send("/reverb/wetLevel", wetLevel);
-                    }
-                    else if (controllerNumber == 12) { // Damping
-                        float damping = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
-                        reverbEffect.setDamping(damping);
-                        oscSender.send("/reverb/damping", damping);
-                    }
-                    else if (controllerNumber == 11) { // Width
-                        float width = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
-                        reverbEffect.setWidth(width);
-                        oscSender.send("/reverb/width", width);
-                    }
-                }
-                
-               
+                float mixValue = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                delayEffect.setMix(mixValue); // Updates the mix level of the delay effect
+                // Creates an OSC message to communicate the updated mix value
+                juce::OSCMessage mixValueMessage("/delay/mixValue", mixValue);
+                oscSender.send(mixValueMessage); // Sends OSC message
             }
-            else if (message.isNoteOnOrOff())
+            else if (controllerNumber == 23)
+            {
+                
+                float feedbackValue = juce::jmap<float>(controllerValue, 0, 127, 0.0f, 1.0f);
+                delayEffect.setFeedback(feedbackValue);
+                juce::OSCMessage feedbackValueMessage("/delay/feedbackValue", feedbackValue);
+                oscSender.send(feedbackValueMessage);
+            }
+            else if (controllerNumber == 9)
+            {
+                int delayTime = juce::jmap<int>(controllerValue, 0, 127, 50, 2000);
+                delayEffect.setDelayTime(delayTime);
+                juce::OSCMessage delayTimeMessage("/delay/delayTime", delayTime);
+                oscSender.send(delayTimeMessage);
+            }
+        }
+  
+             if (message.isNoteOnOrOff())
             {
                 // Log note on/off messages
                 juce::Logger::writeToLog("MIDI Note "
@@ -455,35 +404,10 @@ void MainComponent::handleIncomingMidiMessage(juce::MidiInput* source, const juc
                                          + juce::String(message.getNoteNumber())
                                          + ", Velocity = "
                                          + juce::String(message.getVelocity()));
+         
                 
-                // Play/Pause button
-                if (message.getNoteNumber() == 59 && message.isNoteOn())
-                {
-                    togglePlayPause();
-                }
-                
-                if (message.getNoteNumber() == 66 && message.isNoteOn()) //for testing, advances to next track in the playlist
-                {
-                    nextTrack();
-                }
-                
-                
-                // Handle effect toggling based on note numbers
-                if (message.getNoteNumber() == 90 && message.isNoteOn()) // Button for Delay
-                {
-                    isDelayActive = !isDelayActive;
-                    isReverbActive = false; // Disable Reverb if Delay is toggled
-                    juce::Logger::writeToLog(isDelayActive ? "Delay Effect Enabled" : "Delay Effect Disabled");
-                }
-                else if (message.getNoteNumber() == 91 && message.isNoteOn()) // Button for Reverb
-                {
-                    isReverbActive = !isReverbActive;
-                    isDelayActive = false; // Disable Delay if Reverb is toggled
-                    juce::Logger::writeToLog(isReverbActive ? "Reverb Effect Enabled" : "Reverb Effect Disabled");
-                }
-                
-                // MIDI control for advancing the video
-                else if (message.getNoteNumber() == 64 && message.isNoteOn())
+                // MIDI control for advancing the split screen video
+                 if (message.getNoteNumber() == 64 && message.isNoteOn())
                 {
                     // Send OSC message to advance the video
                     juce::OSCMessage videoAdvanceMessage("/video/advance", 1); // Sending a signal to advance video
@@ -499,7 +423,7 @@ void MainComponent::handleIncomingMidiMessage(juce::MidiInput* source, const juc
         
         
     }
-}
+
 // Play/Pause toggle function
 void MainComponent::togglePlayPause()
 {
@@ -524,7 +448,7 @@ void MainComponent::nextTrack()
 {
     if (!trackFiles.isEmpty())
     {
-        currentTrackIndex = (currentTrackIndex + 1) % trackFiles.size(); // Loop back to the first track if at the end
+        currentTrackIndex = (currentTrackIndex + 1) % trackFiles.size(); // Loops back to the first track if at the end
         loadAudioFile(trackFiles[currentTrackIndex]);
         transportSource.start(); // Start playback
         juce::Logger::writeToLog("Playing next track: " + trackFiles[currentTrackIndex].getFullPathName());
@@ -533,13 +457,48 @@ void MainComponent::nextTrack()
 
 void MainComponent::playNextTrack()
 {
-    if (trackFiles.isEmpty()) return;
+    if (trackFiles.isEmpty())
+        return;
 
-    currentTrackIndex = (currentTrackIndex + 1) % trackFiles.size(); // Loop playlist
+    
+    // Stop the current playback and clean up the current audio source
+    transportSource.stop();
+    transportSource.setSource(nullptr);
+    readerSource.reset();
 
-    loadAudioFile(trackFiles[currentTrackIndex]); // Load new track
-    transportSource.start(); // Start playback
+    // Move to the next track in the playlist --- loops back to start of playlist if it ends
+    currentTrackIndex = (currentTrackIndex + 1) % trackFiles.size();
+    juce::File nextTrack = trackFiles[currentTrackIndex];
+
+    // Creates an audio reader for the next track
+    auto* reader = formatManager.createReaderFor(nextTrack);
+    if (reader != nullptr)
+    {
+        // Wrapped the reader in a reader source that can be used with the transport
+        double fileSampleRate = reader->sampleRate;
+        
+        std::unique_ptr<juce::AudioFormatReaderSource> newSource(
+            new juce::AudioFormatReaderSource(reader, true)
+        );
+
+        // Set the transport source to use the new audio source
+        transportSource.setSource(newSource.get(), 0, nullptr, fileSampleRate);
+        readerSource.reset(newSource.release());
+
+        // Use the stored block size here
+        transportSource.prepareToPlay(currentBlockSize, currentSampleRate);
+
+        // Log the track being played and start playback
+        juce::Logger::writeToLog("Now playing: " + nextTrack.getFullPathName());
+        transportSource.setPosition(0.0); // start from beginning
+        transportSource.start();
+    }
+    else
+    {
+        juce::Logger::writeToLog("Error loading next track: " + nextTrack.getFullPathName());
+    }
 }
+
 
 // Shutdown
 void MainComponent::shutdownAudio()
@@ -566,18 +525,4 @@ void MainComponent::resized()
 {
 
 }
-
-//void MainComponent::listAudioDevices()
-//{
-//    auto& deviceTypes = deviceManager.getAvailableDeviceTypes();
-//
-//    for (auto* deviceType : deviceTypes)
-//    {
-//        juce::StringArray deviceNames = deviceType->getDeviceNames();
-//        for (const auto& name : deviceNames)
-//        {
-//            juce::Logger::writeToLog("Available Audio Device: " + name);
-//        }
-//    }
-//}
 

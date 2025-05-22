@@ -25,6 +25,11 @@ public:
         void setDryLevel(float dry);
         void setWidth(float width);
         void setFreezeMode(bool freeze);
+    
+    // In ReverbEffect.h
+    bool isActive() const {
+        return reverbParams.wetLevel > 0.001f; //  very small values are considered as off
+    }
 
 private:
     
