@@ -1,31 +1,25 @@
 #pragma once
 #include <JuceHeader.h>
-#include "LowPassFilter.h"
-#include "MainComponent.h"
 
-class FrequencyBands
-{
+class FrequencyBands {
 public:
     FrequencyBands();
-    ~FrequencyBands();
+    ~FrequencyBands() = default;
 
     void prepare(double sampleRate, int samplesPerBlock);
-    void process(juce::AudioBuffer<float>& buffer, const juce::MidiBuffer& midiBuffer);
+    void process(juce::AudioBuffer<float>& buffer, const juce::MidiBuffer&);
 
-    // Setters for filter parameters
-    void setBassCutoff(float frequency);
-    void setMidsCutoff(float frequency);
-    void setTopsCutoff(float frequency);
-
-    void setBassResonance(float resonance);
-    void setMidsResonance(float resonance);
-    void setTopsResonance(float resonance);
+    void setBassGain(float gain) { bassGain = gain; }
+    void setMidsGain(float gain) { midsGain = gain; }
+    void setTopsGain(float gain) { topsGain = gain; }
 
 private:
-    // Filters for bass, mids, and tops
-    LowPassFilter bassFilter;  
-    LowPassFilter midsFilter;
-    LowPassFilter topsFilter;
+    // Filters
+    juce::IIRFilter bassLowPass, midsBandPass, topsHighPass;
 
-    float sampleRate = 44100.0f;  // Default sample rate
+    // Gains
+    float bassGain = 1.0f, midsGain = 1.0f, topsGain = 1.0f;
+
+    // Sample rate
+    double currentSampleRate = 44100.0;
 };
